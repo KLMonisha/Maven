@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 
 // ─────────────────────────────────────────────
 // GROQ API KEY — loaded from .env (VITE_GROQ_API_KEY)
@@ -216,6 +217,42 @@ const css = `
 
   .fade-up  { animation: fadeUp 0.35s ease both; }
   .fade-in  { animation: fadeIn 0.4s ease both; }
+
+  /* ── markdown inside chat bubbles ── */
+  .fade-up p { margin: 0 0 0.6em; }
+  .fade-up p:last-child { margin-bottom: 0; }
+  .fade-up ul, .fade-up ol { margin: 0.4em 0 0.6em 1.4em; padding: 0; }
+  .fade-up li { margin-bottom: 0.25em; }
+  .fade-up strong { color: ${G.accent}; font-weight: 600; }
+  .fade-up em { font-style: italic; color: ${G.mutedHi}; }
+  .fade-up code {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.88em;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid ${G.border};
+  }
+  .fade-up pre {
+    background: ${G.bg};
+    border: 1px solid ${G.border};
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 0.5em 0;
+  }
+  .fade-up pre code { background: none; border: none; padding: 0; }
+  .fade-up hr {
+    border: none;
+    border-top: 1px solid ${G.border};
+    margin: 0.8em 0;
+  }
+  .fade-up h1, .fade-up h2, .fade-up h3 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    margin: 0.6em 0 0.3em;
+    color: ${G.text};
+  }
 `;
 
 // ─── sub-components ────────────────────────
@@ -339,11 +376,10 @@ function Message({ msg }) {
         fontSize: 15,
         lineHeight: 1.68,
         maxWidth: "86%",
-        whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         color: G.text,
       }}>
-        {msg.content}
+        <ReactMarkdown>{msg.content}</ReactMarkdown>
       </div>
     </div>
   );
@@ -536,33 +572,46 @@ export default function App() {
 
     if (listening) {
       recognRef.current?.stop();
+      recognRef.current = null;
       setListening(false);
+      // send whatever has been transcribed so far
+      if (input.trim()) {
+        setTimeout(() => send(input), 100);
+      }
       return;
     }
 
     const rec = new SpeechRec();
     rec.lang = "en-US";
     rec.interimResults = true;
-    rec.continuous = false;
+    rec.continuous = true;
 
     rec.onstart = () => setListening(true);
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    rec.onend = () => {
+      // auto-restart if still listening (handles browser timeouts / pauses)
+      if (recognRef.current) {
+        try { rec.start(); } catch {}
+      } else {
+        setListening(false);
+      }
+    };
+    rec.onerror = (e) => {
+      if (e.error !== "no-speech") {
+        recognRef.current = null;
+        setListening(false);
+      }
+    };
 
     rec.onresult = (e) => {
       const transcript = Array.from(e.results)
         .map(r => r[0].transcript)
         .join("");
       setInput(transcript);
-      // auto-send on final result
-      if (e.results[e.results.length - 1].isFinal) {
-        setTimeout(() => send(transcript), 200);
-      }
     };
 
     recognRef.current = rec;
     rec.start();
-  }, [listening, send]);
+  }, [listening, send, input]);
 
   return (
     <>
