@@ -403,7 +403,7 @@ function Welcome({ onStart }) {
         maxWidth: 320,
         lineHeight: 1.65,
       }}>
-        A no-BS business mentor built for freelancers serious about growing their income. Free while we're testing.
+        A no-BS business mentor built for freelancers serious about growing their income.
       </p>
 
       <button
@@ -441,7 +441,7 @@ function Welcome({ onStart }) {
         letterSpacing: "0.03em",
         marginTop: 4,
       }}>
-        No account needed · Free beta
+        No account needed · Early access
       </span>
     </div>
   );
@@ -649,7 +649,7 @@ export default function App() {
               fontSize: 11,
               color: G.muted,
               letterSpacing: "0.04em",
-            }}>Freelance mentor · Free beta</span>
+            }}>Freelance mentor · Beta</span>
           </div>
         </header>
 
