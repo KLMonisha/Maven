@@ -371,6 +371,61 @@ function Message({ msg }) {
 }
 
 function Welcome({ onStart }) {
+  const [email, setEmail] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [accessState, setAccessState] = useState(null); // null | "granted" | "denied" | "error"
+
+  const checkoutUrl = import.meta.env.VITE_WHOP_CHECKOUT_URL || "https://whop.com";
+
+  const checkAccess = useCallback(async () => {
+    const trimmed = email.trim();
+    if (!trimmed) return;
+
+    setChecking(true);
+    setAccessState(null);
+
+    try {
+      const res = await fetch("/api/access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+
+      if (!res.ok) throw new Error("API error");
+
+      const data = await res.json();
+      setAccessState(data.has_access ? "granted" : "denied");
+    } catch {
+      setAccessState("error");
+    } finally {
+      setChecking(false);
+    }
+  }, [email]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      checkAccess();
+    }
+  }, [checkAccess]);
+
+  // Shared button style
+  const btnBase = {
+    marginTop: 10,
+    border: "none",
+    padding: "13px 34px",
+    borderRadius: 10,
+    fontFamily: "'Syne', sans-serif",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+    letterSpacing: "0.02em",
+    transition: "all 0.18s",
+    textDecoration: "none",
+    display: "inline-block",
+    textAlign: "center",
+  };
+
   return (
     <div className="fade-up" style={{
       flex: 1, display: "flex", flexDirection: "column",
@@ -406,33 +461,179 @@ function Welcome({ onStart }) {
         A no-BS business mentor built for freelancers serious about growing their income.
       </p>
 
-      <button
-        onClick={onStart}
-        style={{
-          marginTop: 10,
-          background: G.accent,
-          color: "#0c0c0c",
-          border: "none",
-          padding: "13px 34px",
-          borderRadius: 10,
-          fontFamily: "'Syne', sans-serif",
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: "pointer",
-          letterSpacing: "0.02em",
-          transition: "all 0.18s",
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.boxShadow = `0 8px 28px rgba(212,255,78,0.28)`;
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform = "none";
-          e.currentTarget.style.boxShadow = "none";
-        }}
-      >
-        Start session →
-      </button>
+      {/* ── email input ── */}
+      {accessState !== "granted" && (
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center",
+          gap: 10, marginTop: 6, width: "100%", maxWidth: 340,
+        }}>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter your email"
+            disabled={checking}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: 10,
+              border: `1px solid ${G.border}`,
+              background: G.surface,
+              color: G.text,
+              fontFamily: "'Syne', sans-serif",
+              fontSize: 14,
+              outline: "none",
+              caretColor: G.accent,
+              transition: "border-color 0.2s",
+              textAlign: "center",
+              opacity: checking ? 0.5 : 1,
+            }}
+            onFocus={e => { e.target.style.borderColor = G.accent; }}
+            onBlur={e => { e.target.style.borderColor = G.border; }}
+          />
+
+          {/* Check access button — only show when no result yet */}
+          {accessState === null && (
+            <button
+              onClick={checkAccess}
+              disabled={!email.trim() || checking}
+              style={{
+                ...btnBase,
+                background: !email.trim() || checking ? G.border : G.accent,
+                color: !email.trim() || checking ? G.muted : "#0c0c0c",
+                cursor: !email.trim() || checking ? "not-allowed" : "pointer",
+                marginTop: 4,
+              }}
+              onMouseEnter={e => {
+                if (email.trim() && !checking) {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = `0 8px 28px rgba(212,255,78,0.28)`;
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              {checking ? "Checking..." : "Verify access →"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── denied: show Get Access button ── */}
+      {accessState === "denied" && (
+        <div className="fade-up" style={{
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+        }}>
+          <p style={{
+            fontSize: 13,
+            color: G.mutedHi,
+            maxWidth: 300,
+            lineHeight: 1.6,
+          }}>
+            No active membership found for that email. Get access to start your session.
+          </p>
+          <a
+            href={checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              ...btnBase,
+              background: G.accent,
+              color: "#0c0c0c",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = `0 8px 28px rgba(212,255,78,0.28)`;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          >
+            Get access →
+          </a>
+          <button
+            onClick={() => setAccessState(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: G.muted,
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 11,
+              cursor: "pointer",
+              letterSpacing: "0.03em",
+              marginTop: 2,
+              textDecoration: "underline",
+              textUnderlineOffset: "3px",
+            }}
+          >
+            Try a different email
+          </button>
+        </div>
+      )}
+
+      {/* ── granted: show Start Session button ── */}
+      {accessState === "granted" && (
+        <div className="fade-up" style={{
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+        }}>
+          <p style={{
+            fontSize: 13,
+            color: G.accent,
+            fontFamily: "'DM Mono', monospace",
+            letterSpacing: "0.03em",
+          }}>
+            ✓ Access verified
+          </p>
+          <button
+            onClick={onStart}
+            style={{
+              ...btnBase,
+              background: G.accent,
+              color: "#0c0c0c",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = `0 8px 28px rgba(212,255,78,0.28)`;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          >
+            Start session →
+          </button>
+        </div>
+      )}
+
+      {/* ── error state ── */}
+      {accessState === "error" && (
+        <div className="fade-up" style={{
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+        }}>
+          <p style={{ fontSize: 13, color: "#ff6b6b" }}>
+            Something went wrong. Please try again.
+          </p>
+          <button
+            onClick={() => setAccessState(null)}
+            style={{
+              background: "none",
+              border: `1px solid ${G.border}`,
+              color: G.mutedHi,
+              fontFamily: "'Syne', sans-serif",
+              fontSize: 13,
+              padding: "8px 20px",
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <span style={{
         fontFamily: "'DM Mono', monospace",
@@ -441,7 +642,7 @@ function Welcome({ onStart }) {
         letterSpacing: "0.03em",
         marginTop: 4,
       }}>
-        No account needed · Early access
+        Membership required · Early access
       </span>
     </div>
   );
