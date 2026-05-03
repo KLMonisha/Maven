@@ -1,14 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 
-// ─────────────────────────────────────────────
-// GROQ API KEY — loaded from .env (VITE_GROQ_API_KEY)
-// Locally: stored in .env file (git-ignored)
-// Vercel: set in project Environment Variables
-// ─────────────────────────────────────────────
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
-const GROQ_MODEL = "llama-3.3-70b-versatile";
-
 const SYSTEM_PROMPT = `You are Maven — a sharp, no-BS business mentor built exclusively for freelancers who are serious about growing their income. You are not a general-purpose AI. You do not help with things outside of freelance business growth. You are the mentor your user wishes they had when they started.
 
 Your one job: help freelancers go from where they are now to 10k+ months — through better positioning, pricing, client acquisition, proposals, retention, and business decisions.
@@ -110,21 +102,14 @@ If the user tries to use you for anything unrelated (writing a poem, coding help
 
 // ─── helpers ───────────────────────────────
 async function callGroq(messages) {
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const res = await fetch("/api/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: GROQ_MODEL,
       messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-      temperature: 0.72,
-      max_tokens: 1024,
-      stream: true,
     }),
   });
-  if (!res.ok) throw new Error(`Groq error ${res.status}`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.body;
 }
 
