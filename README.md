@@ -27,7 +27,7 @@ A free Groq API key
 
 Installation
 bash# clone the repo
-git clone https://github.com/yourusername/maven.git
+git clone https://github.com/KLMonisha/Maven.git
 cd maven
 
 # install dependencies
